@@ -406,12 +406,8 @@ const gameScene = (params) => {
     ]);
 
     const languageIconMap = {
-        javascript: "icon_02",
-        ts: "icon_01",
-        golang: "icon_03",
-        react: "icon_04",
-        python: "icon_05",
-        default: "icon_02",
+        java: "icon_01",
+        default: "icon_01",
     };
 
     const texts = dialogsData

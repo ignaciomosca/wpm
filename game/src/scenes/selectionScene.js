@@ -11,7 +11,7 @@ export const settings = {
     practiceMode: false,
     isCapsOn: false,
     rivalSpeed: 0,
-    language: "js"
+    language: "java"
 };
 function isMobile() {
     return /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i
@@ -93,7 +93,6 @@ k.scene("selection", () => {
     const selecttext = k.add([k.anchor("left"), k.text("", { size: fontsize }), resizablePos(() => k.vec2(buttonLeftX, buttonTopY)), k.opacity(1), k.z(21)]);
     const selecttext2 = k.add([k.anchor("left"), k.text("", { size: fontsize }), resizablePos(() => k.vec2(buttonLeftX, buttonTopY + buttonGap)), k.opacity(1), k.z(21)]);
     const selecttext3 = k.add([k.anchor("left"), k.text("", { size: fontsize }), resizablePos(() => k.vec2(buttonLeftX, buttonTopY + buttonGap * 2)), k.opacity(1), k.z(21)]);
-    const selecttext4 = k.add([k.anchor("left"), k.text("", { size: fontsize }), resizablePos(() => k.vec2(buttonLeftX + 250, buttonTopY + buttonGap)), k.opacity(1), k.z(21)]);
 
     const button_muteON = k.add([
         k.sprite("muteON"),
@@ -129,20 +128,14 @@ k.scene("selection", () => {
                 commands = ["yes", "no"];
                 break;
             case 2:
-                commands = ["javascript", "python", "golang"];
-                break;
-            case 3:
                 commands = ["interview", "practice"];
                 break;
         }
         selecttext.text = stage === 0 ? "start"
             : stage === 1 ? "Play with Audio?"
-                : stage === 2 ? "Language"
-                    : "Game Mode";
+                : "Game Mode";
         selecttext2.text = commands[0];
         selecttext3.text = commands[1];
-        if (stage === 2) selecttext4.text = commands[2];
-        else selecttext4.text = "";
 
         updateTextColors();
     }
@@ -156,8 +149,7 @@ k.scene("selection", () => {
 
         const defaults = {
             1: "yes",
-            2: "javascript",
-            3: "interview"
+            2: "interview"
         };
 
         return defaults[stage] || "start";
@@ -236,13 +228,6 @@ k.scene("selection", () => {
                 ];
                 break;
             case 2:
-                commandList = [
-                    { obj: selecttext2, label: "javascript" },
-                    { obj: selecttext3, label: "python" },
-                    { obj: selecttext4, label: "golang" }
-                ];
-                break;
-            case 3:
                 commandList = [
                     { obj: selecttext2, label: "interview" },
                     { obj: selecttext3, label: "practice" }
@@ -371,21 +356,6 @@ k.scene("selection", () => {
         });
 
         switch (input.toLowerCase()) {
-            case "javascript":
-            case "python":
-            case "golang":
-                if (stage === 2) {
-                    settings.language = input.toLowerCase();
-                    advanceStage();
-                    updateStageCommands();
-                    const candidate = calcNewTarget("");
-                    if (candidate !== targetText) {
-                        targetText = candidate;
-                        maxLength = targetText.length;
-                        createLetterObjects();
-                    }
-                }
-                break;
             case "github":
                 if (stage === 0) {
                     window.open("https://github.com/conanbatt/wpm", "_blank");
@@ -429,14 +399,14 @@ k.scene("selection", () => {
                 }
                 break;
             case "interview":
-                if (stage === 3) {
+                if (stage === 2) {
                     window.removeEventListener("keydown", handleKeydown);
                     setCapsLockActive(settings.isCapsOn);
                     k.go("game");
                 }
                 break;
             case "practice":
-                if (stage === 3) {
+                if (stage === 2) {
                     settings.practiceMode = true;
                     setCapsLockActive(settings.isCapsOn);
                     window.removeEventListener("keydown", handleKeydown);
@@ -470,9 +440,6 @@ k.scene("selection", () => {
                 resetCommon("Yes");
                 break;
             case 2:
-                resetCommon("javascript");
-                break;
-            case 3:
                 resetCommon("Interview");
                 break;
             default:
