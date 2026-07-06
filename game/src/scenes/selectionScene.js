@@ -18,6 +18,7 @@ function isMobile() {
         .test(navigator.userAgent);
 }
 k.scene("selection", () => {
+    k.loadSprite("icon_06", "/sprites/icon_06.png");
     k.loadSprite("icon_05", "/sprites/icon_05.png");
     k.loadSprite("icon_04", "/sprites/icon_04.png");
     k.loadSprite("icon_03", "/sprites/icon_03.png");

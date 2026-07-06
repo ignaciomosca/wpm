@@ -28,6 +28,7 @@ import { themes } from "../data/themes.js";
 import { resizablePos } from "../components/resizablePos.js";
 import { resizableRect } from "../components/resizableRect.js";
 import { settings } from "./selectionScene.js";
+import { pickExercises, markShown } from "../systems/exerciseHistory.js";
 
 let COLOR_TEXT_DEFAULT = k.Color.fromHex("#6a717d");
 let COLOR_TEXT_RIVAL = k.YELLOW;
@@ -104,7 +105,7 @@ const gameScene = (params) => {
     const filteredDialogs = dialogsData.filter(
         item => (item.language || "default") === settings.language
     );
-    const shuffledDialogs = shuffle([...filteredDialogs]);
+    const shuffledDialogs = pickExercises(filteredDialogs, MAX_BLOCKS);
 
     //save for analiytics
     blockNamesString = shuffledDialogs.slice(0, MAX_BLOCKS).map(item => item.title);
@@ -225,6 +226,7 @@ const gameScene = (params) => {
                 StatsforAnalitics();
                 resetGameStats();
                 onBlockReached(completedBlocks, lastChallenge);
+                markShown(shuffledDialogs.slice(0, completedBlocks).map(d => d.id));
                 k.go("endgame");
                 return;
             }
@@ -406,8 +408,8 @@ const gameScene = (params) => {
     ]);
 
     const languageIconMap = {
-        java: "icon_01",
-        default: "icon_01",
+        java: "icon_06",
+        default: "icon_06",
     };
 
     const texts = dialogsData
@@ -625,6 +627,7 @@ const gameScene = (params) => {
             StatsforAnalitics();
             resetGameStats();
             music.stop();
+            markShown(shuffledDialogs.slice(0, completedBlocks).map(d => d.id));
             k.go("endgame");
             return;
         }
