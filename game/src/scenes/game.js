@@ -3,11 +3,9 @@ import "../types.js";
 import {
     gameState,
     dialogsData,
-    lineHeight,
     MAX_TIME,
     EASY_RIVAL_SPEED,
     HARD_RIVAL_SPEED,
-    JUMP_AFTER,
     TEXT_START_Y,
     SPACING,
     MAX_BLOCKS,
@@ -84,7 +82,8 @@ const gameScene = (params) => {
     k.loadMusic("endgame", "/sounds/endgame.mp3");
     k.loadSprite("arrow_yellow", "/sprites/arrow_yellow.png");
 
-    let jumpCount = 0;
+    let scrollX = 0;
+    let scrollLines = 0;
     let theme = themes[0];
     let currentBlockIndex = -1;
     let rivalSpeed = settings.rivalSpeed;
@@ -308,10 +307,12 @@ const gameScene = (params) => {
         for (let i = 0; i < titleTexts.length; i++) {
             const textObj = titleTexts[i];
             if (shuffledDialogs[currentBlockIndex + i]) {
-                textObj.text = shuffledDialogs[currentBlockIndex + i].title;
+                textObj.fullTitle = shuffledDialogs[currentBlockIndex + i].title;
+                textObj.text = fitTitle(textObj.fullTitle);
                 textObj.color = (currentBlockIndex + i) <= currentBlockIndex ? k.rgb(127, 134, 131) : k.WHITE;
 
             } else {
+                textObj.fullTitle = "";
                 textObj.text = "";
             }
         }
@@ -326,6 +327,29 @@ const gameScene = (params) => {
         }
     };
     const filesFoldersPos = () => k.vec2(0, 0);
+
+    // Editor geometry. The code viewport starts below the top header so
+    // scrolled-past lines get clipped instead of showing under the bar.
+    const EDITOR_TOP = 103;
+    const textboxSize = () => k.vec2(k.width(), k.height());
+    const textboxPos = () => {
+        if (k.width() > 1080) {
+            return k.vec2(450, 0);
+        }
+        return k.vec2(k.width() * 0.3, 0);
+    };
+    const editorViewportPos = () => k.vec2(textboxPos().x, EDITOR_TOP);
+    const editorViewportSize = () =>
+        k.vec2(textboxSize().x, textboxSize().y - EDITOR_TOP);
+
+    // Truncate challenge titles so long names never bleed into the editor.
+    const TITLE_CHAR_WIDTH = 11;
+    const fitTitle = (title) => {
+        const avail = textboxPos().x - k.width() * 0.05 - 12;
+        const maxChars = Math.max(6, Math.floor(avail / TITLE_CHAR_WIDTH));
+        if (title.length <= maxChars) return title;
+        return title.slice(0, Math.max(1, maxChars - 3)) + "...";
+    };
     const wmp_text = k.add([
         k.anchor("left"),
         k.pos(k.width() * 0.25 + 90, k.height() * 0.025),
@@ -438,7 +462,7 @@ const gameScene = (params) => {
         ]);
 
         k.add([
-            k.text(title, { size: 20 }),
+            k.text(fitTitle(title), { size: 20 }),
             resizablePos(() =>
                 k.vec2(
                     k.width() * 0.05,
@@ -448,7 +472,7 @@ const gameScene = (params) => {
             k.color(k.WHITE),
             k.opacity(1),
             "menuItem",
-            { menuIndex: index },
+            { menuIndex: index, fullTitle: title },
         ]);
     });
 
@@ -496,16 +520,7 @@ const gameScene = (params) => {
         });
     }
 
-    const textboxSize = () => k.vec2(k.width(), k.height());
-    const textboxPos = () => {
-        if (k.width() > 1080) {
-            return k.vec2(450, 0);
-        }
-
-        return k.vec2(k.width() * 0.3, 0);
-    };
-
-    const textPadding = k.vec2(50, 103);
+    const textPadding = k.vec2(50, 0);
 
     k.setVolume(0.5);
 
@@ -518,20 +533,60 @@ const gameScene = (params) => {
         k.z(0),
     ]);
     const textboxBackParent = k.add([
-        resizableRect(textboxSize),
-        resizablePos(textboxPos),
+        k.rect(editorViewportSize().x, editorViewportSize().y),
+        resizableRect(editorViewportSize),
+        resizablePos(editorViewportPos),
         k.anchor("topleft"),
         k.color(),
         k.rotate(0),
         k.scale(1),
         k.z(10),
-        k.opacity(0),
+        // opacity(1) is required: the mask writes its rect to the stencil
+        // buffer via its own draw, which kaplay skips when opacity is 0.
+        // The rect itself never shows — the mask draw suppresses color.
+        k.opacity(1),
+        // Clip the child text to the editor viewport: horizontally scrolled
+        // lines don't bleed over the file panel on the left, and vertically
+        // scrolled lines don't show above the header.
+        k.mask("intersect"),
     ]);
 
 
+    const lineSpacing = 12;
+    const actualLineHeight = fontSize + lineSpacing;
+    const cursorVerticalOffset = (actualLineHeight - fontSize) / 2;
+    const CURSOR_EXTRA_OFFSET = 10;
+
     const textboxTextPos = () => {
-        return k.vec2(textPadding).sub(0, lineHeight * (JUMP_AFTER * jumpCount));
+        return k.vec2(textPadding).sub(scrollX, actualLineHeight * scrollLines);
     }
+
+    // Horizontal scroll: how many characters fit in the visible textbox width.
+    const SCROLL_RIGHT_MARGIN_PX = 40;
+    const SCROLL_MARGIN_COLS = 6;
+    const visibleTextCols = () => {
+        const avail = k.width() - textboxPos().x - textPadding.x - SCROLL_RIGHT_MARGIN_PX;
+        return Math.max(10, Math.floor(avail / fontWidth));
+    };
+    // Scroll only follows the player's cursor, keeping it a few columns
+    // away from the right edge. Short lines never scroll (offset stays 0).
+    const computeScrollX = () => {
+        const maxVisibleCol = visibleTextCols() - SCROLL_MARGIN_COLS;
+        const over = playerState.curCharInLine - maxVisibleCol;
+        return over > 0 ? over * fontWidth : 0;
+    };
+
+    // Vertical scroll: how many text rows fit in the visible viewport.
+    const VSCROLL_BOTTOM_MARGIN = 2;
+    const visibleTextRows = () =>
+        Math.max(4, Math.floor(editorViewportSize().y / actualLineHeight));
+    // Scroll follows the player's cursor, keeping it a couple of rows from
+    // the bottom edge. Short solutions never scroll (offset stays 0).
+    const computeScrollLines = () => {
+        const maxVisibleRow = visibleTextRows() - VSCROLL_BOTTOM_MARGIN;
+        const over = playerState.curLineCount - maxVisibleRow;
+        return over > 0 ? over : 0;
+    };
 
     const textboxText = textboxBackParent.add([
         k.text("", {
@@ -546,16 +601,10 @@ const gameScene = (params) => {
         resizablePos(textboxTextPos),
     ]);
 
-    const lineSpacing = 12;
-    const actualLineHeight = fontSize + lineSpacing;
-    const cursorVerticalOffset = (actualLineHeight - fontSize) / 2;
-    const CURSOR_EXTRA_OFFSET = 10;
-
     const cursorPos = (rival = false) => {
         const player = rival ? rivalState : playerState;
-        const displayLine = player.curLineCount - jumpCount * JUMP_AFTER;
         const x = player.curCharInLine * fontWidth;
-        const y = displayLine * actualLineHeight
+        const y = player.curLineCount * actualLineHeight
             + cursorVerticalOffset
             + CURSOR_EXTRA_OFFSET;
         return textboxBackParent.pos
@@ -652,8 +701,9 @@ const gameScene = (params) => {
         }
 
         gameState.timeLeft = MAX_TIME;
-        jumpCount = 0;
-        textboxText.updatePos();
+        scrollLines = 0;
+        scrollX = 0;
+        textboxText.pos = textboxTextPos();
 
         const currentDialog = getCurrentDialog();
         const lang = currentDialog.language ?? "default";
@@ -672,8 +722,8 @@ const gameScene = (params) => {
         playerState.line = fixedText.split("\n")[0];
         rivalState.line = playerState.line;
         lastChallenge = currentDialog.title;
-        cursorPointer.updatePos();
-        rivalPointer.updatePos();
+        cursorPointer.pos = cursorPos();
+        rivalPointer.pos = cursorPos(true);
     }
 
     function updateMusic() {
@@ -696,12 +746,35 @@ const gameScene = (params) => {
         textboxText.text = renderedText;
     }
 
+    // Recompute the horizontal scroll from the player's cursor. When it
+    // changes, the whole text block shifts and both cursors follow.
+    function applyScroll() {
+        const next = computeScrollX();
+        if (next === scrollX) return;
+        scrollX = next;
+        textboxText.pos = textboxTextPos();
+        cursorPointer.pos = cursorPos();
+        rivalPointer.pos = cursorPos(true);
+    }
+
+    // Recompute the vertical scroll from the player's cursor. When it
+    // changes, the whole text block shifts up and both cursors follow.
+    function applyVerticalScroll() {
+        const next = computeScrollLines();
+        if (next === scrollLines) return;
+        scrollLines = next;
+        textboxText.pos = textboxTextPos();
+        cursorPointer.pos = cursorPos();
+        rivalPointer.pos = cursorPos(true);
+    }
+
     function nextChar(rival = false) {
         const player = rival ? rivalState : playerState;
         if (!player.cursorPointer) return;
 
         player.cursorPos++;
         player.curCharInLine++;
+        if (!rival) applyScroll();
         player.cursorPointer.pos = cursorPos(rival);
         logGroupWithColor(fixedText);
     }
@@ -712,6 +785,7 @@ const gameScene = (params) => {
 
         player.cursorPos--;
         player.curCharInLine--;
+        if (!rival) applyScroll();
         player.cursorPointer.pos = cursorPos(rival);
         logGroupWithColor(fixedText);
     }
@@ -720,12 +794,6 @@ const gameScene = (params) => {
         const player = isRival ? rivalState : playerState;
         if (!player.cursorPointer) return;
         player.curLineCount++;
-        if (JUMP_AFTER == 1) {
-            jumpCount++;
-        }
-        else if (playerState.curLineCount >= JUMP_AFTER * (jumpCount + 1)) {
-            jumpCount++;
-        }
         if (!isRival) {
             totalCorrectlines++;
         }
@@ -738,6 +806,10 @@ const gameScene = (params) => {
         player.curIdentSize = lineIdent;
         player.curCharInLine = lineIdent;
 
+        if (!isRival) {
+            applyScroll();
+            applyVerticalScroll();
+        }
         textboxText.updatePos();
         player.cursorPointer.pos = cursorPos(isRival);
         cursorPointer.updatePos();
@@ -883,6 +955,11 @@ const gameScene = (params) => {
             if (obj.is("resizablePos")) obj.updatePos();
             if (obj.is("resizableRect")) obj.updateRectSize();
         }
+        applyScroll();
+        applyVerticalScroll();
+        k.get("menuItem").forEach((item) => {
+            if (item.fullTitle !== undefined) item.text = fitTitle(item.fullTitle);
+        });
     });
 
     updateDialog();

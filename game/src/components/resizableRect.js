@@ -16,10 +16,14 @@ export const resizableRect = (resizeFunc) => ({
     id: "resizableRect",
     resizeFunc,
     add() {
-        // this.use(k.rect(this.resizeFunc().x, this.resizeFunc().y));
+        const size = this.resizeFunc();
+        this.width = size.x;
+        this.height = size.y;
     },
     updateRectSize() {
-        // this.use(k.rect(this.resizeFunc().x, this.resizeFunc().y));
+        const size = this.resizeFunc();
+        this.width = size.x;
+        this.height = size.y;
     },
     destroy() {
         gameState.resizableObjects = gameState.resizableObjects.filter(
