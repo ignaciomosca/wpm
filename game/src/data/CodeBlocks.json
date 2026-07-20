@@ -397,5 +397,34 @@
       "    }\n",
       "}\n"
     ]
+  },
+  {
+    "id": 14,
+    "title": "EncodeAndDecodeStrings",
+    "language": "java",
+    "blocks": [
+      "class Solution {\n",
+      "\n",
+      "    public String encode(List<String> strs) {\n",
+      "        StringBuilder sb = new StringBuilder();\n",
+      "        for (String s : strs) {\n",
+      "            sb.append(s.length()).append(\"#\").append(s);\n",
+      "        }\n",
+      "        return sb.toString();\n",
+      "    }\n",
+      "\n",
+      "    public List<String> decode(String str) {\n",
+      "        List<String> ret = new ArrayList<>();\n",
+      "        int i = 0;\n",
+      "        while (i < str.length()) {\n",
+      "            int j = str.indexOf('#', i);\n",
+      "            int length = Integer.parseInt(str.substring(i,j));\n",
+      "            ret.add(str.substring(j+1, j + 1 + length));\n",
+      "            i = j + 1 + length;\n",
+      "        }\n",
+      "        return ret;\n",
+      "    }\n",
+      "}\n"
+    ]
   }
 ]
