@@ -426,5 +426,58 @@
       "    }\n",
       "}\n"
     ]
+  },
+  {
+    "id": 15,
+    "title": "ProductsOfArrayExceptSelf",
+    "language": "java",
+    "blocks": [
+      "public class Solution {\n",
+      "    public int[] productExceptSelf(int[] nums) {\n",
+      "        int n = nums.length;\n",
+      "        int[] res = new int[n];\n",
+      "        Arrays.fill(res, 1);\n",
+      "\n",
+      "        // IDA: izquierda a derecha\n",
+      "        int pre = 1;\n",
+      "        for (int i = 0; i < n; i++) {\n",
+      "            res[i] *= pre;      // primero multiplico\n",
+      "            pre *= nums[i];     // despues acumulo\n",
+      "        }\n",
+      "\n",
+      "        // VUELTA: derecha a izquierda\n",
+      "        int post = 1;\n",
+      "        for (int i = n - 1; i >= 0; i--) {\n",
+      "            res[i] *= post;     // primero multiplico\n",
+      "            post *= nums[i];    // despues acumulo\n",
+      "        }\n",
+      "        return res;\n",
+      "    }\n",
+      "}\n"
+    ]
+  },
+  {
+    "id": 16,
+    "title": "ValidSudoku",
+    "language": "java",
+    "blocks": [
+      "class Solution {\n",
+      "    public boolean isValidSudoku(char[][] board) {\n",
+      "        Set<String> seen = new HashSet<>();\n",
+      "        for (int r = 0; r < 9; r++) {\n",
+      "            for (int c = 0; c < 9; c++) {\n",
+      "                char v = board[r][c];\n",
+      "                if (v == '.') continue;\n",
+      "                if (!seen.add(v + \" in row \" + r) ||\n",
+      "                    !seen.add(v + \" in col \" + c) ||\n",
+      "                    !seen.add(v + \" in box \" + r / 3 + \"-\" + c / 3)) {\n",
+      "                    return false;\n",
+      "                }\n",
+      "            }\n",
+      "        }\n",
+      "        return true;\n",
+      "    }\n",
+      "}\n"
+    ]
   }
 ]
