@@ -1,4 +1,5 @@
 import { shuffle } from "../data/utilities.js";
+import { getRankWeight } from "./rankingSystem.js";
 
 const STORAGE_KEY = "exerciseHistory";
 
@@ -43,11 +44,11 @@ export const markShown = (ids) => {
 };
 
 /**
- * Picks `count` exercises from `dialogs`, preferring those completed longer
- * ago (never-completed first). Ties are broken randomly, and the final picked
- * set is shuffled to randomize session order.
- *
- * Replace the priority function here to evolve into spaced repetition.
+ * Picks `count` exercises from `dialogs` using weighted random sampling
+ * without replacement. Each exercise's weight comes from the user's
+ * confidence ranking (see rankingSystem): weaker exercises are more likely
+ * to be picked, while mastered ("Solid") ones keep a small chance so they
+ * still come up occasionally for review.
  *
  * @template {{id: number|string}} T
  * @param {T[]} dialogs
@@ -55,12 +56,23 @@ export const markShown = (ids) => {
  * @returns {T[]}
  */
 export const pickExercises = (dialogs, count) => {
-    const history = getHistory();
     const pool = shuffle([...dialogs]);
-    pool.sort((a, b) => {
-        const aShown = history[String(a.id)] ?? 0;
-        const bShown = history[String(b.id)] ?? 0;
-        return aShown - bShown;
-    });
-    return shuffle(pool.slice(0, count));
+    const picked = [];
+
+    while (picked.length < count && pool.length > 0) {
+        const weights = pool.map(d => getRankWeight(d.id));
+        const total = weights.reduce((sum, w) => sum + w, 0);
+        let r = Math.random() * total;
+
+        let idx = 0;
+        while (idx < pool.length - 1 && r >= weights[idx]) {
+            r -= weights[idx];
+            idx++;
+        }
+
+        picked.push(pool[idx]);
+        pool.splice(idx, 1);
+    }
+
+    return picked;
 };

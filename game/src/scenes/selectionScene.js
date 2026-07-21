@@ -94,6 +94,7 @@ k.scene("selection", () => {
     const selecttext = k.add([k.anchor("left"), k.text("", { size: fontsize }), resizablePos(() => k.vec2(buttonLeftX, buttonTopY)), k.opacity(1), k.z(21)]);
     const selecttext2 = k.add([k.anchor("left"), k.text("", { size: fontsize }), resizablePos(() => k.vec2(buttonLeftX, buttonTopY + buttonGap)), k.opacity(1), k.z(21)]);
     const selecttext3 = k.add([k.anchor("left"), k.text("", { size: fontsize }), resizablePos(() => k.vec2(buttonLeftX, buttonTopY + buttonGap * 2)), k.opacity(1), k.z(21)]);
+    const selecttext4 = k.add([k.anchor("left"), k.text("", { size: fontsize }), resizablePos(() => k.vec2(buttonLeftX, buttonTopY + buttonGap * 3)), k.opacity(1), k.z(21)]);
 
     const button_muteON = k.add([
         k.sprite("muteON"),
@@ -123,7 +124,7 @@ k.scene("selection", () => {
     function updateStageCommands() {
         switch (stage) {
             case 0:
-                commands = ["about", "github", "start"];
+                commands = ["about", "github", "ranking", "start"];
                 break;
             case 1:
                 commands = ["yes", "no"];
@@ -137,6 +138,7 @@ k.scene("selection", () => {
                 : "Game Mode";
         selecttext2.text = commands[0];
         selecttext3.text = commands[1];
+        selecttext4.text = stage === 0 ? "ranking" : "";
 
         updateTextColors();
     }
@@ -210,6 +212,7 @@ k.scene("selection", () => {
         selecttext.color = k.rgb(255, 255, 255);
         selecttext2.color = k.rgb(255, 255, 255);
         selecttext3.color = k.rgb(255, 255, 255);
+        selecttext4.color = k.rgb(255, 255, 255);
 
         const cmdLower = targetText.toLowerCase();
         let commandList;
@@ -219,7 +222,8 @@ k.scene("selection", () => {
                 commandList = [
                     { obj: selecttext, label: "start" },
                     { obj: selecttext2, label: "about" },
-                    { obj: selecttext3, label: "github" }
+                    { obj: selecttext3, label: "github" },
+                    { obj: selecttext4, label: "ranking" }
                 ];
                 break;
             case 1:
@@ -367,6 +371,12 @@ k.scene("selection", () => {
                 if (stage === 0) {
                     window.removeEventListener("keydown", handleKeydown);
                     k.go("about");
+                }
+                break;
+            case "ranking":
+                if (stage === 0) {
+                    window.removeEventListener("keydown", handleKeydown);
+                    k.go("ranking");
                 }
                 break;
             case "start":

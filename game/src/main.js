@@ -6,6 +6,7 @@ import "./scenes/game.js"; // load game scene
 import "./scenes/endGame.js"; // load endGame scene
 import "./scenes/selectionScene.js";
 import "./scenes/about.js";
+import "./scenes/rankingScene.js";
 import "./data/changeStyle.js";
 import "./data/utilities.js";
 k.go("selection");
